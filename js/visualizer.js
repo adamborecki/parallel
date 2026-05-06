@@ -1,244 +1,133 @@
-const HISTORY_SECONDS = 3.8;
-const METER_HZ = 30;
-const HISTORY_LENGTH = Math.ceil(HISTORY_SECONDS * METER_HZ);
-
-const COLORS = {
-  dry: '#f5f1e8',
-  wet: '#6ea8fe',
-  blend: '#ff7a59',
-  threshold: '#ffb703',
-  envelope: '#80ffdb',
-  baseline: 'rgba(245, 241, 232, 0.5)',
-  lift: 'rgba(255, 183, 3, 0.85)',
-  grid: 'rgba(255,255,255,0.08)',
-  gridStrong: 'rgba(255,255,255,0.14)',
-  text: 'rgba(255,255,255,0.56)',
-};
+// Visualizer — overlays the dry waveform and the post-blend waveform on
+// one canvas, with a gain-reduction strip along the bottom. The point is
+// to *see* the wet path filling in the quiet bits between dry transients.
 
 export class Visualizer {
-  constructor(engine) {
+  constructor(canvas, engine) {
+    this.canvas = canvas;
     this.engine = engine;
-    this.signalsCanvas = document.getElementById('signals-canvas');
-    this.detectorCanvas = document.getElementById('detector-canvas');
-    this.blendCanvas = document.getElementById('blend-canvas');
-    this.grFill = document.getElementById('gr-meter-fill');
-    this.grValue = document.getElementById('gr-value');
-    this.mixValue = document.getElementById('mix-value');
-    this.wetValue = document.getElementById('wet-value');
-
-    this.envHistory = new Array(HISTORY_LENGTH).fill(-60);
-    this.thresholdHistory = new Array(HISTORY_LENGTH).fill(-30);
-    this.wetHistory = new Array(HISTORY_LENGTH).fill(0);
-    this.addedHistory = new Array(HISTORY_LENGTH).fill(0);
-
+    this.ctx = canvas.getContext('2d');
     this.running = false;
-    this.rafId = null;
+    this._onResize = this._resize.bind(this);
 
+    window.addEventListener('resize', this._onResize);
     this._resize();
-    window.addEventListener('resize', () => this._resize());
-    engine.onMeter((meter) => this._onMeter(meter));
-  }
-
-  _resize() {
-    const dpr = window.devicePixelRatio || 1;
-    for (const canvas of [this.signalsCanvas, this.detectorCanvas, this.blendCanvas]) {
-      if (!canvas) continue;
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      canvas._cssWidth = rect.width;
-      canvas._cssHeight = rect.height;
-    }
   }
 
   start() {
     if (this.running) return;
     this.running = true;
-    this._loop();
+    const tick = () => {
+      if (!this.running) return;
+      this._draw();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   stop() {
     this.running = false;
-    if (this.rafId) cancelAnimationFrame(this.rafId);
-    this.rafId = null;
   }
 
-  _onMeter(meter) {
-    const wetContribution = meter.wetGain * this.engine.getBlend();
-
-    this.envHistory.push(meter.envDb);
-    this.envHistory.shift();
-    this.thresholdHistory.push(meter.threshold);
-    this.thresholdHistory.shift();
-    this.wetHistory.push(meter.wetGain);
-    this.wetHistory.shift();
-    this.addedHistory.push(wetContribution);
-    this.addedHistory.shift();
-
-    const gr = Math.max(0, meter.grDb);
-    this.grFill.style.height = `${Math.min(100, (gr / 24) * 100)}%`;
-    this.grValue.textContent = gr.toFixed(1);
-    this.mixValue.textContent = Math.round(this.engine.getBlend() * 100);
-    this.wetValue.textContent = meter.wetGain.toFixed(2);
+  _resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = this.canvas.getBoundingClientRect();
+    this.canvas.width = rect.width * dpr;
+    this.canvas.height = rect.height * dpr;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.w = rect.width;
+    this.h = rect.height;
   }
 
-  _loop() {
-    if (!this.running) return;
-    this.rafId = requestAnimationFrame(() => this._loop());
-    this._drawSignals();
-    this._drawDetector();
-    this._drawBlend();
-  }
+  _draw() {
+    const ctx = this.ctx;
+    const w = this.w;
+    const h = this.h;
+    const meterH = 18;
+    const waveH = h - meterH - 12;
 
-  _drawSignals() {
-    const canvas = this.signalsCanvas;
-    const ctx = canvas.getContext('2d');
-    const width = canvas._cssWidth;
-    const height = canvas._cssHeight;
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, w, h);
 
-    const laneHeight = height / 3;
-    this._drawSignalLane(ctx, 0, laneHeight, 'DRY PATH', this.engine.getTimeDomain('dry'), COLORS.dry);
-    this._drawSignalLane(ctx, laneHeight, laneHeight, 'CRUSHED PATH', this.engine.getTimeDomain('wet'), COLORS.wet);
-    this._drawSignalLane(ctx, laneHeight * 2, laneHeight, 'FINAL BLEND', this.engine.getTimeDomain('blend'), COLORS.blend);
-  }
-
-  _drawSignalLane(ctx, top, height, label, data, color) {
-    const width = this.signalsCanvas._cssWidth;
-    const half = height / 2;
-    const mid = top + half;
-
-    ctx.strokeStyle = COLORS.grid;
+    // Center reference line
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, mid);
-    ctx.lineTo(width, mid);
+    ctx.moveTo(0, waveH / 2);
+    ctx.lineTo(w, waveH / 2);
     ctx.stroke();
 
-    ctx.fillStyle = COLORS.text;
-    ctx.font = '10px "IBM Plex Sans", sans-serif';
-    ctx.fillText(label, 8, top + 12);
+    const dry = this.engine.getTimeDomain('dry');
+    const blend = this.engine.getTimeDomain('blend');
 
+    // Blend waveform — filled, back layer
+    this._drawWave(blend, waveH, getCss('--blend'), 0.32, true);
+    // Dry waveform — thin line on top
+    this._drawWave(dry, waveH, getCss('--air'), 1.0, false);
+
+    // Gain reduction strip
+    const grDb = this.engine.getGainReductionDb();
+    const grNorm = Math.min(1, grDb / 20);
+
+    const meterY = h - meterH;
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillRect(0, meterY, w, meterH);
+
+    if (grNorm > 0.001) {
+      const grColor = grNorm < 0.3 ? getCss('--air')
+        : grNorm < 0.6 ? getCss('--weight')
+        : getCss('--punch');
+      ctx.fillStyle = grColor;
+      ctx.fillRect(0, meterY, w * grNorm, meterH);
+    }
+
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
+    ctx.font = '11px "IBM Plex Sans", system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      `Gain reduction · ${grDb.toFixed(1)} dB`,
+      8,
+      meterY + meterH / 2
+    );
+  }
+
+  _drawWave(samples, height, color, alpha, fill) {
+    const ctx = this.ctx;
+    const w = this.w;
+    const mid = height / 2;
+    const step = samples.length / w;
+
+    ctx.globalAlpha = alpha;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    const step = data.length / width;
-    for (let x = 0; x < width; x++) {
-      const index = Math.floor(x * step);
-      const sample = Math.max(-1, Math.min(1, data[index] || 0));
-      const y = mid - sample * half * 0.76;
-      if (x === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
+    ctx.fillStyle = color;
+    ctx.lineWidth = fill ? 1 : 1.5;
 
-  _drawDetector() {
-    const canvas = this.detectorCanvas;
-    const ctx = canvas.getContext('2d');
-    const width = canvas._cssWidth;
-    const height = canvas._cssHeight;
-    ctx.clearRect(0, 0, width, height);
-
-    const dbMin = -60;
-    const dbMax = 0;
-    const toY = (db) => {
-      const t = (db - dbMin) / (dbMax - dbMin);
-      return height - t * height;
-    };
-
-    ctx.font = '9px "IBM Plex Sans", sans-serif';
-    ctx.fillStyle = COLORS.text;
-    ctx.strokeStyle = COLORS.grid;
-
-    for (const db of [-12, -24, -36, -48]) {
-      const y = toY(db);
+    if (fill) {
       ctx.beginPath();
-      ctx.moveTo(28, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-      ctx.fillText(`${db}`, 4, y + 3);
-    }
-
-    const threshold = this.thresholdHistory[this.thresholdHistory.length - 1] ?? -30;
-    const thresholdY = toY(threshold);
-    ctx.strokeStyle = COLORS.threshold;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(28, thresholdY);
-    ctx.lineTo(width, thresholdY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.strokeStyle = COLORS.envelope;
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    const usableWidth = width - 28;
-    for (let i = 0; i < this.envHistory.length; i++) {
-      const x = 28 + (i / (this.envHistory.length - 1)) * usableWidth;
-      const y = toY(Math.max(dbMin, Math.min(dbMax, this.envHistory[i])));
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-
-  _drawBlend() {
-    const canvas = this.blendCanvas;
-    const ctx = canvas.getContext('2d');
-    const width = canvas._cssWidth;
-    const height = canvas._cssHeight;
-    ctx.clearRect(0, 0, width, height);
-
-    const maxValue = 2.2;
-    const toY = (value) => height - (Math.max(0, Math.min(maxValue, value)) / maxValue) * height;
-    const unityY = toY(1);
-
-    ctx.font = '9px "IBM Plex Sans", sans-serif';
-    ctx.fillStyle = COLORS.text;
-
-    for (const value of [0.5, 1.0, 1.5, 2.0]) {
-      const y = toY(value);
-      ctx.strokeStyle = value === 1.0 ? COLORS.gridStrong : COLORS.grid;
+      ctx.moveTo(0, mid);
+      for (let x = 0; x < w; x++) {
+        const idx = Math.floor(x * step);
+        const v = samples[idx] || 0;
+        ctx.lineTo(x, mid + v * mid * 0.92);
+      }
+      ctx.lineTo(w, mid);
+      ctx.closePath();
+      ctx.fill();
+    } else {
       ctx.beginPath();
-      ctx.moveTo(28, y);
-      ctx.lineTo(width, y);
+      for (let x = 0; x < w; x++) {
+        const idx = Math.floor(x * step);
+        const v = samples[idx] || 0;
+        const y = mid + v * mid * 0.92;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
       ctx.stroke();
-      ctx.fillText(`${value.toFixed(1)}x`, 3, y + 3);
     }
 
-    ctx.strokeStyle = COLORS.baseline;
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(28, unityY);
-    ctx.lineTo(width, unityY);
-    ctx.stroke();
-
-    const usableWidth = width - 28;
-    ctx.fillStyle = 'rgba(255, 183, 3, 0.18)';
-    ctx.beginPath();
-    ctx.moveTo(28, unityY);
-    for (let i = 0; i < this.addedHistory.length; i++) {
-      const x = 28 + (i / (this.addedHistory.length - 1)) * usableWidth;
-      const value = 1 + this.addedHistory[i];
-      ctx.lineTo(x, toY(value));
-    }
-    ctx.lineTo(28 + usableWidth, unityY);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = COLORS.lift;
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    for (let i = 0; i < this.addedHistory.length; i++) {
-      const x = 28 + (i / (this.addedHistory.length - 1)) * usableWidth;
-      const value = 1 + this.addedHistory[i];
-      const y = toY(value);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
+}
+
+function getCss(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 }

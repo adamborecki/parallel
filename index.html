@@ -3,369 +3,112 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Parallel — Learn Parallel Compression / NY Compression</title>
+  <title>Parallel — Learn Parallel Compression</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="app">
-    <section id="welcome" class="screen active">
-      <div class="welcome-content">
-        <div class="welcome-hero">
-          <p class="eyebrow">Compression Lab 03</p>
-          <h1 class="logo">Parallel</h1>
-          <p class="subtitle">
-            Learn <span class="color-punch">parallel compression</span> and
-            <span class="color-weight">NY compression</span> by hearing the
-            <span class="color-air">dry signal</span>, the
-            <span class="color-crush">crushed copy</span>, and the
-            <span class="color-blend">blend</span> together.
-          </p>
+  <header id="topbar">
+    <div class="brand">
+      <h1>Parallel</h1>
+      <span class="brand-tag">Parallel / NY Compression</span>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="lessons">Lessons</button>
+      <button class="tab" data-tab="playground">Playground</button>
+      <button class="tab" data-tab="quiz">Quiz</button>
+    </nav>
+  </header>
+
+  <main id="app">
+    <!-- Lessons -->
+    <section id="section-lessons" class="section active">
+      <div class="section-intro">
+        <h2>Learn parallel compression</h2>
+        <p>Five short lessons. Each card has preset chips that snap the playground to a setting and start playback so you can <em>hear</em> the concept immediately.</p>
+      </div>
+      <div id="lessons-list"></div>
+    </section>
+
+    <!-- Playground -->
+    <section id="section-playground" class="section">
+      <div class="playground">
+        <div class="viz-wrap">
+          <div class="viz-legend">
+            <span><span class="dot" style="background:var(--air)"></span>Dry signal</span>
+            <span><span class="dot" style="background:var(--blend)"></span>Blended output</span>
+          </div>
+          <canvas id="viz"></canvas>
         </div>
-        <button id="start-btn" class="btn btn-primary btn-xl">Start Here</button>
-        <div class="welcome-info">
-          <p>What you’ll do:</p>
-          <ul>
-            <li><strong>Lessons</strong> — guided explanations of dry path, wet path, and the NY drum trick</li>
-            <li><strong>Playground</strong> — adjust threshold, ratio, attack, release, makeup, and blend</li>
-            <li><strong>Quiz</strong> — check whether the concepts actually landed</li>
-            <li><strong>Challenge</strong> — generate a short written summary for class or notes</li>
-          </ul>
-          <p class="note">Built-in demo loops are synthesized in the browser.</p>
-          <p class="note">Headphones help, especially when comparing dry versus crushed.</p>
+
+        <div class="transport">
+          <button id="play-btn" class="btn-primary">Play</button>
+          <button id="bypass-btn" class="btn-ghost">Bypass A/B</button>
+          <div class="source-row">
+            <button class="source-btn active" data-source="drums">Drum Bus</button>
+            <button class="source-btn" data-source="vocal">Vocal</button>
+            <button class="source-btn" data-source="mix">Full Mix</button>
+          </div>
+        </div>
+
+        <div class="knobs">
+          <label class="knob">
+            <span class="knob-name">Threshold</span>
+            <input type="range" data-knob="threshold">
+            <span class="knob-val" data-readout="threshold">—</span>
+            <span class="knob-hint">When the wet path starts being compressed.</span>
+          </label>
+          <label class="knob">
+            <span class="knob-name">Ratio</span>
+            <input type="range" data-knob="ratio">
+            <span class="knob-val" data-readout="ratio">—</span>
+            <span class="knob-hint">How hard the wet path is squashed above threshold.</span>
+          </label>
+          <label class="knob">
+            <span class="knob-name">Attack</span>
+            <input type="range" data-knob="attack">
+            <span class="knob-val" data-readout="attack">—</span>
+            <span class="knob-hint">Slower attack lets transients through the wet path.</span>
+          </label>
+          <label class="knob">
+            <span class="knob-name">Release</span>
+            <input type="range" data-knob="release">
+            <span class="knob-val" data-readout="release">—</span>
+            <span class="knob-hint">How fast the wet path recovers between hits.</span>
+          </label>
+          <label class="knob">
+            <span class="knob-name">Makeup</span>
+            <input type="range" data-knob="makeup">
+            <span class="knob-val" data-readout="makeup">—</span>
+            <span class="knob-hint">Boosts the wet path after compression.</span>
+          </label>
+          <label class="knob highlight">
+            <span class="knob-name">Blend</span>
+            <input type="range" data-knob="blend">
+            <span class="knob-val" data-readout="blend">—</span>
+            <span class="knob-hint">How much of the crushed copy you actually hear.</span>
+          </label>
         </div>
       </div>
     </section>
 
-    <section id="loading" class="screen">
-      <div class="loading-content">
-        <h2 class="logo">Parallel</h2>
-        <div class="loading-spinner"></div>
-        <p id="loading-text">Initializing audio engine...</p>
+    <!-- Quiz -->
+    <section id="section-quiz" class="section">
+      <div class="section-intro">
+        <h2>Quiz</h2>
+        <p>Twelve quick checks. Pick an answer to lock it in and see why.</p>
+        <p class="quiz-score-line">Score: <span id="quiz-score">0 / 0 correct</span></p>
       </div>
+      <div id="quiz-list"></div>
     </section>
+  </main>
 
-    <section id="main-app" class="screen">
-      <header id="app-header">
-        <div class="header-left">
-          <h1 class="header-logo">Parallel</h1>
-          <span class="header-tag">Parallel Compression / NY Compression</span>
-        </div>
-        <nav id="mode-nav">
-          <button class="mode-tab active" data-mode="guided">Lessons</button>
-          <button class="mode-tab" data-mode="playground">Playground</button>
-          <button class="mode-tab" data-mode="quiz">Quiz</button>
-          <button class="mode-tab" data-mode="challenge">Challenge</button>
-        </nav>
-        <div class="header-right">
-          <div class="status-chip">
-            <span class="status-label">Preset</span>
-            <span id="current-usecase-label">NY Drums</span>
-          </div>
-          <div class="status-chip">
-            <span class="status-label">Score</span>
-            <span><span id="total-score">0</span> pts</span>
-          </div>
-        </div>
-      </header>
+  <footer id="footer">
+    <p>Built for college audio classes. Source on <a href="https://github.com/adamborecki/parallel">GitHub</a>.</p>
+  </footer>
 
-      <div id="audio-panel">
-        <div id="source-row">
-          <div id="source-buttons">
-            <span class="panel-label">Demo Source</span>
-            <button class="source-btn active" data-source="drums">🥁 Drum Bus</button>
-            <button class="source-btn" data-source="vocal">🎙️ Vocal</button>
-            <button class="source-btn" data-source="mix">🎚️ Full Mix</button>
-            <button class="source-btn" data-source="room">🏙️ Room Crush</button>
-          </div>
-          <div id="transport-controls">
-            <button id="play-btn" class="transport-btn" title="Play / Pause">
-              <span class="play-icon">▶</span>
-              <span class="pause-icon hidden">⏸</span>
-            </button>
-            <button id="stop-btn" class="transport-btn" title="Stop">⏹</button>
-            <label class="toggle-label">
-              <input type="checkbox" id="loop-toggle" checked>
-              <span>Loop</span>
-            </label>
-            <label class="toggle-label">
-              <input type="checkbox" id="bypass-toggle">
-              <span>Bypass</span>
-            </label>
-            <label class="toggle-label">
-              <input type="checkbox" id="wet-solo-toggle">
-              <span>Solo Crushed</span>
-            </label>
-          </div>
-          <div id="volume-control">
-            <span class="vol-icon">🔊</span>
-            <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.75">
-            <span id="volume-label">75%</span>
-          </div>
-        </div>
-
-        <div id="viz-grid">
-          <div class="viz-cell viz-span-wide">
-            <div class="viz-header">
-              <span class="viz-title">Dry / Crushed / Blend</span>
-              <span class="viz-legend">
-                <span class="legend-swatch swatch-dry"></span>Dry
-                <span class="legend-swatch swatch-wet"></span>Crushed
-                <span class="legend-swatch swatch-blend"></span>Blend
-              </span>
-            </div>
-            <canvas id="signals-canvas"></canvas>
-          </div>
-
-          <div class="viz-cell viz-cell-meter">
-            <div class="viz-header">
-              <span class="viz-title">Gain Reduction</span>
-            </div>
-            <div id="gr-meter">
-              <div id="gr-meter-fill"></div>
-              <div id="gr-meter-scale">
-                <span>0</span>
-                <span>-6</span>
-                <span>-12</span>
-                <span>-18</span>
-                <span>-24</span>
-              </div>
-            </div>
-            <div class="meter-readouts">
-              <div><span class="readout-label">GR</span><span><span id="gr-value">0.0</span> dB</span></div>
-              <div><span class="readout-label">Blend</span><span><span id="mix-value">0</span>%</span></div>
-              <div><span class="readout-label">Wet Path</span><span><span id="wet-value">0.00</span>x</span></div>
-            </div>
-          </div>
-
-          <div class="viz-cell">
-            <div class="viz-header">
-              <span class="viz-title">Detector Envelope</span>
-              <span class="viz-legend">
-                <span class="legend-swatch swatch-threshold"></span>Threshold
-                <span class="legend-swatch swatch-envelope"></span>Input envelope
-              </span>
-            </div>
-            <canvas id="detector-canvas"></canvas>
-          </div>
-
-          <div class="viz-cell">
-            <div class="viz-header">
-              <span class="viz-title">Added Weight From Wet Path</span>
-              <span class="viz-legend">
-                <span class="legend-swatch swatch-baseline"></span>Dry baseline
-                <span class="legend-swatch swatch-lift"></span>Wet contribution
-              </span>
-            </div>
-            <canvas id="blend-canvas"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div id="content-area">
-        <div id="guided-panel" class="content-panel active">
-          <div id="guided-layout">
-            <aside id="guided-sidebar">
-              <h3>Lessons</h3>
-              <ol id="lesson-list"></ol>
-            </aside>
-            <section id="guided-main">
-              <div id="lesson-header">
-                <h2 id="lesson-title"></h2>
-                <span id="step-counter"></span>
-              </div>
-              <div id="lesson-content">
-                <div id="step-text"></div>
-                <div id="step-listen-for" class="hidden">
-                  <span class="listen-icon">👂</span>
-                  <span id="listen-for-text"></span>
-                </div>
-                <div id="step-controls" class="hidden"></div>
-                <div id="step-question" class="hidden">
-                  <p id="question-text"></p>
-                  <div id="question-options"></div>
-                  <div id="question-feedback" class="hidden"></div>
-                </div>
-              </div>
-              <div id="lesson-nav">
-                <button id="prev-step-btn" class="btn btn-secondary" disabled>← Back</button>
-                <div id="step-dots"></div>
-                <button id="next-step-btn" class="btn btn-primary">Next →</button>
-              </div>
-            </section>
-          </div>
-          <div id="guided-progress">
-            <div id="progress-bar"><div id="progress-fill"></div></div>
-            <span id="progress-text"></span>
-          </div>
-        </div>
-
-        <div id="playground-panel" class="content-panel">
-          <div id="playground-header">
-            <div>
-              <h2>Playground</h2>
-              <p>Blend the crushed copy back under the dry signal and listen for more punch, density, and sustain.</p>
-            </div>
-            <div id="preset-copy">
-              <h3 id="preset-copy-title">NY Drums</h3>
-              <p id="preset-copy-text">Aggressive compression on a duplicate drum bus, then mixed back in to add smack and body without destroying the original transients.</p>
-            </div>
-          </div>
-
-          <div id="usecase-row">
-            <span class="panel-label">Starting Points</span>
-            <button class="usecase-btn color-punch active" data-usecase="nyDrums">NY Drums</button>
-            <button class="usecase-btn color-weight" data-usecase="vocalDensity">Vocal Density</button>
-            <button class="usecase-btn color-air" data-usecase="mixLift">Mix Lift</button>
-            <button class="usecase-btn color-crush" data-usecase="roomCrush">Room Crush</button>
-          </div>
-
-          <div id="knob-grid">
-            <div class="knob-cell">
-              <label class="knob-label" for="k-threshold">Threshold</label>
-              <input type="range" id="k-threshold" min="-60" max="0" step="0.1" value="-30">
-              <div class="knob-value"><span id="k-threshold-val">-30.0</span> dB</div>
-            </div>
-            <div class="knob-cell">
-              <label class="knob-label" for="k-ratio">Ratio</label>
-              <input type="range" id="k-ratio" min="1" max="20" step="0.1" value="8">
-              <div class="knob-value"><span id="k-ratio-val">8.0</span> : 1</div>
-            </div>
-            <div class="knob-cell">
-              <label class="knob-label" for="k-attack">Attack</label>
-              <input type="range" id="k-attack" min="0" max="1" step="0.001" value="0.58">
-              <div class="knob-value"><span id="k-attack-val">22 ms</span></div>
-            </div>
-            <div class="knob-cell">
-              <label class="knob-label" for="k-release">Release</label>
-              <input type="range" id="k-release" min="0" max="1" step="0.001" value="0.58">
-              <div class="knob-value"><span id="k-release-val">160 ms</span></div>
-            </div>
-            <div class="knob-cell">
-              <label class="knob-label" for="k-makeup">Wet Makeup</label>
-              <input type="range" id="k-makeup" min="0" max="24" step="0.1" value="10">
-              <div class="knob-value"><span id="k-makeup-val">10.0</span> dB</div>
-            </div>
-            <div class="knob-cell accent-cell">
-              <label class="knob-label" for="k-blend">Blend</label>
-              <input type="range" id="k-blend" min="0" max="100" step="1" value="42">
-              <div class="knob-value"><span id="k-blend-val">42</span>% crushed path added</div>
-            </div>
-          </div>
-
-          <div id="preset-row">
-            <span class="panel-label">Quick Presets</span>
-            <button class="preset-btn" data-preset="subtle">Subtle</button>
-            <button class="preset-btn" data-preset="classic">Classic NY</button>
-            <button class="preset-btn" data-preset="smash">Smash</button>
-            <button class="preset-btn" data-preset="reset">Reset</button>
-          </div>
-
-          <div id="playground-notes">
-            <div class="note-card">
-              <h3>Listen For</h3>
-              <p id="listen-note">The dry drum transients stay intact while the crushed path adds body between hits.</p>
-            </div>
-            <div class="note-card">
-              <h3>Typical Mistake</h3>
-              <p id="mistake-note">If the blend is too high, the loop stops sounding “parallel” and just becomes obviously over-compressed.</p>
-            </div>
-          </div>
-        </div>
-
-        <div id="quiz-panel" class="content-panel">
-          <div id="quiz-start">
-            <h2>Quiz</h2>
-            <p>Short concept check on parallel compression and NY compression.</p>
-            <div id="quiz-options">
-              <label for="quiz-count">Questions</label>
-              <select id="quiz-count">
-                <option value="5">5 (Quick)</option>
-                <option value="8" selected>8 (Standard)</option>
-                <option value="12">12 (Full)</option>
-              </select>
-            </div>
-            <button id="quiz-start-btn" class="btn btn-primary btn-lg">Start Quiz</button>
-            <div id="quiz-best-score" class="hidden">
-              <p>Your best score: <span id="best-score-val">0</span>%</p>
-            </div>
-          </div>
-
-          <div id="quiz-active" class="hidden">
-            <div id="quiz-progress">
-              <span id="quiz-question-num"></span>
-              <div id="quiz-progress-bar"><div id="quiz-progress-fill"></div></div>
-              <span id="quiz-score-live">Score: <span id="quiz-current-score">0</span></span>
-            </div>
-            <div id="quiz-question-area">
-              <p id="quiz-question-text"></p>
-              <div id="quiz-answers"></div>
-            </div>
-            <div id="quiz-feedback" class="hidden">
-              <p id="quiz-feedback-text"></p>
-              <button id="quiz-next-btn" class="btn btn-primary">Next</button>
-            </div>
-          </div>
-
-          <div id="quiz-results" class="hidden">
-            <h3>Quiz Complete</h3>
-            <p>You scored <span id="quiz-final-score">0</span>%.</p>
-            <p id="quiz-result-copy"></p>
-            <button id="quiz-retry-btn" class="btn btn-secondary">Try Again</button>
-          </div>
-        </div>
-
-        <div id="challenge-panel" class="content-panel">
-          <div class="challenge-card">
-            <h2>Challenge</h2>
-            <p>Generate a concise write-up explaining how you would use parallel compression in a real mix.</p>
-
-            <div class="challenge-grid">
-              <label>
-                <span>Name</span>
-                <input type="text" id="ch-name" placeholder="Your name">
-              </label>
-              <label>
-                <span>Best use case</span>
-                <select id="ch-usecase">
-                  <option value="drums">Drum bus / NY compression</option>
-                  <option value="vocal">Vocal density</option>
-                  <option value="mix">Full mix lift</option>
-                  <option value="room">Room crush</option>
-                </select>
-              </label>
-              <label class="span-full">
-                <span>Explain the idea in one or two sentences</span>
-                <textarea id="ch-concept" rows="4" placeholder="Parallel compression means..."></textarea>
-              </label>
-              <label class="span-full">
-                <span>What settings would you start with?</span>
-                <textarea id="ch-settings" rows="4" placeholder="I would begin with..."></textarea>
-              </label>
-              <label class="span-full">
-                <span>What would you listen for while blending the wet path back in?</span>
-                <textarea id="ch-listen" rows="4" placeholder="I would listen for..."></textarea>
-              </label>
-              <label class="span-full">
-                <span>What mistake should a beginner avoid?</span>
-                <textarea id="ch-mistake" rows="4" placeholder="A common mistake is..."></textarea>
-              </label>
-            </div>
-
-            <div class="challenge-actions">
-              <button id="challenge-generate" class="btn btn-primary">Generate Summary</button>
-              <button id="challenge-copy" class="btn btn-secondary">Copy</button>
-            </div>
-
-            <textarea id="challenge-output" rows="14" readonly placeholder="Your generated summary will appear here."></textarea>
-          </div>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
