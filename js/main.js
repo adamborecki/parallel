@@ -3,6 +3,7 @@ import { Visualizer } from './visualizer.js';
 import { SOURCES } from './sources.js';
 import { LESSONS } from './lessons.js';
 import { QUESTIONS } from './quiz.js';
+import { renderChallenge } from './challenge.js';
 
 const engine = new AudioEngine();
 let visualizer = null;
@@ -250,6 +251,7 @@ function init() {
   wireTabs();
   renderLessons();
   renderQuiz();
+  renderChallenge();
 
   // Set knob sliders to default position visually before audio init.
   for (const [name, knob] of Object.entries(KNOBS)) {
