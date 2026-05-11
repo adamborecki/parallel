@@ -1,5 +1,18 @@
-// Challenge — short reflection form that generates a formatted summary
-// students can paste into Canvas (or any LMS) for class credit.
+// Challenge — short reflection form that generates a detailed summary
+// students can paste into Canvas for class credit. The summary captures
+// reflection answers, lesson and main-quiz scores, time spent per section,
+// and a short SHA-256 validity hash so the instructor can detect tampering.
+
+import { LESSONS } from './lessons.js';
+import { QUESTIONS } from './quiz.js';
+import {
+  getSectionTimes,
+  getTotalElapsedMs,
+  getLessonAnswers,
+  getMainAnswers,
+  formatDuration,
+  makeValidityHash,
+} from './progress.js';
 
 export const PROMPTS = [
   {
@@ -27,6 +40,10 @@ export function renderChallenge() {
       <span class="field-label">Your name:</span>
       <input type="text" id="ch-name" placeholder="Jane Student" autocomplete="name">
     </label>
+    <label class="field">
+      <span class="field-label">Course / Section (optional):</span>
+      <input type="text" id="ch-course" placeholder="MUS 210 — Section B">
+    </label>
     ${PROMPTS.map((p) => `
       <label class="field">
         <span class="field-label">${p.label}</span>
@@ -47,18 +64,66 @@ export function renderChallenge() {
   document.getElementById('ch-copy').addEventListener('click', copyToClipboard);
 }
 
-function generate() {
+async function generate() {
   const name = document.getElementById('ch-name').value.trim() || '(unnamed)';
-  const date = new Date().toLocaleDateString(undefined, {
+  const course = document.getElementById('ch-course').value.trim();
+  const now = new Date();
+  const date = now.toLocaleDateString(undefined, {
     year: 'numeric', month: 'long', day: 'numeric',
   });
+  const time = now.toLocaleTimeString(undefined, {
+    hour: '2-digit', minute: '2-digit',
+  });
 
+  const lessonAnswers = getLessonAnswers();
+  const mainAnswers = getMainAnswers();
+  const sectionTimes = getSectionTimes();
+  const totalElapsed = getTotalElapsedMs();
+
+  const lessonStats = countAnswers(lessonAnswers);
+  const mainStats = countAnswers(mainAnswers);
+
+  // Build the body before hashing, then append the hash.
   const lines = [
-    'Parallel Compression — Class Challenge',
-    `Name: ${name}`,
-    `Date: ${date}`,
+    '═══════════════════════════════════════════════',
+    '  PARALLEL COMPRESSION — CLASS CHALLENGE SUMMARY',
+    '═══════════════════════════════════════════════',
     '',
-  ];
+    `Name:     ${name}`,
+    course ? `Course:   ${course}` : null,
+    `Date:     ${date} at ${time}`,
+    `Session:  ${formatDuration(totalElapsed)} total`,
+    '',
+    '── Time spent per section ──',
+    `  Lessons:     ${formatDuration(sectionTimes.lessons || 0)}`,
+    `  Playground:  ${formatDuration(sectionTimes.playground || 0)}`,
+    `  Quiz:        ${formatDuration(sectionTimes.quiz || 0)}`,
+    `  Challenge:   ${formatDuration(sectionTimes.challenge || 0)}`,
+    '',
+    '── Lesson check-yourself questions ──',
+    `  Answered: ${lessonStats.answered} / ${LESSONS.length}`,
+    `  Correct:  ${lessonStats.correct} / ${lessonStats.answered || 0}`,
+    ...LESSONS.map((l) => {
+      const ans = lessonAnswers[l.id];
+      if (!ans) return `  · ${l.shortLabel}: (not attempted)`;
+      const mark = ans.correct ? '✓' : '✗';
+      return `  · ${l.shortLabel}: ${mark} "${truncate(ans.selectedLabel, 60)}"`;
+    }),
+    '',
+    '── Main quiz ──',
+    `  Answered: ${mainStats.answered} / ${QUESTIONS.length}`,
+    `  Correct:  ${mainStats.correct} / ${mainStats.answered || 0}`,
+    ...QUESTIONS.map((_, qi) => {
+      const ans = mainAnswers[qi];
+      if (!ans) return `  Q${qi + 1}: (not attempted)`;
+      const mark = ans.correct ? '✓' : '✗';
+      const tail = ans.correct ? '' : `  →  correct: "${truncate(ans.correctLabel, 50)}"`;
+      return `  Q${qi + 1}: ${mark} "${truncate(ans.selectedLabel, 50)}"${tail}`;
+    }),
+    '',
+    '── Reflection prompts ──',
+    '',
+  ].filter((line) => line !== null);
 
   for (const p of PROMPTS) {
     const answer = document.querySelector(`textarea[data-prompt="${p.id}"]`).value.trim();
@@ -67,9 +132,33 @@ function generate() {
     lines.push('');
   }
 
-  document.getElementById('ch-summary').textContent = lines.join('\n');
+  const body = lines.join('\n');
+  const hash = await makeValidityHash(body);
+
+  const finalText = [
+    body,
+    '═══════════════════════════════════════════════',
+    `  Validity hash: ${hash}`,
+    `  Generated:     ${now.toISOString()}`,
+    '═══════════════════════════════════════════════',
+  ].join('\n');
+
+  document.getElementById('ch-summary').textContent = finalText;
   document.getElementById('ch-output').hidden = false;
   document.getElementById('ch-copy').hidden = false;
+}
+
+function countAnswers(map) {
+  const values = Object.values(map);
+  return {
+    answered: values.length,
+    correct: values.filter((v) => v.correct).length,
+  };
+}
+
+function truncate(str, n) {
+  if (!str) return '';
+  return str.length > n ? str.slice(0, n - 1) + '…' : str;
 }
 
 async function copyToClipboard() {

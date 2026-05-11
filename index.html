@@ -28,25 +28,33 @@
     <section id="section-lessons" class="section active">
       <div class="section-intro">
         <h2>Learn parallel compression</h2>
-        <p>Five short lessons. Each card has preset chips that snap the playground to a setting and start playback so you can <em>hear</em> the concept immediately.</p>
+        <p>Five short lessons. Use the tabs below to jump between them. Each lesson has playable presets, a live visualization, and a check-yourself question at the end.</p>
       </div>
-      <div id="lessons-list"></div>
+      <nav id="lesson-tabs" class="lesson-tabs" aria-label="Lessons"></nav>
+      <div id="lesson-content"></div>
     </section>
 
     <!-- Playground -->
     <section id="section-playground" class="section">
+      <div class="section-intro">
+        <h2>Playground</h2>
+        <p>Try a preset to snap the controls to a known starting point, then tweak the knobs and listen.</p>
+      </div>
+
       <div class="playground">
+        <div class="preset-bar" data-preset-bar="playground"></div>
+
         <div class="viz-wrap">
           <div class="viz-legend">
             <span><span class="dot" style="background:var(--air)"></span>Dry signal</span>
             <span><span class="dot" style="background:var(--blend)"></span>Blended output</span>
           </div>
-          <canvas id="viz"></canvas>
+          <canvas class="viz"></canvas>
         </div>
 
         <div class="transport">
-          <button id="play-btn" class="btn-primary">Play</button>
-          <button id="bypass-btn" class="btn-ghost">Bypass A/B</button>
+          <button class="play-btn btn-primary">Play</button>
+          <button class="bypass-btn btn-ghost">Bypass A/B</button>
           <div class="source-row">
             <button class="source-btn active" data-source="drums">Drum Bus</button>
             <button class="source-btn" data-source="vocal">Vocal</button>
@@ -109,8 +117,58 @@
     <section id="section-challenge" class="section">
       <div class="section-intro">
         <h2>🎯 Class Challenge</h2>
-        <p>Apply what you've learned. Use the Playground to explore each scenario, then write up your findings below. Generate a summary you can paste into Canvas.</p>
+        <p>Apply what you've learned. The controls below are the same as the Playground — keep them in front of you while you write up each prompt, then generate a summary to paste into Canvas.</p>
       </div>
+
+      <!-- Embedded controls so students can listen while they write. -->
+      <div class="challenge-rig">
+        <div class="preset-bar" data-preset-bar="challenge"></div>
+        <div class="viz-wrap compact">
+          <canvas class="viz"></canvas>
+        </div>
+        <div class="transport">
+          <button class="play-btn btn-primary">Play</button>
+          <button class="bypass-btn btn-ghost">Bypass A/B</button>
+          <div class="source-row">
+            <button class="source-btn active" data-source="drums">Drum Bus</button>
+            <button class="source-btn" data-source="vocal">Vocal</button>
+            <button class="source-btn" data-source="mix">Full Mix</button>
+          </div>
+        </div>
+        <div class="knobs compact">
+          <label class="knob">
+            <span class="knob-name">Threshold</span>
+            <input type="range" data-knob="threshold">
+            <span class="knob-val" data-readout="threshold">—</span>
+          </label>
+          <label class="knob">
+            <span class="knob-name">Ratio</span>
+            <input type="range" data-knob="ratio">
+            <span class="knob-val" data-readout="ratio">—</span>
+          </label>
+          <label class="knob">
+            <span class="knob-name">Attack</span>
+            <input type="range" data-knob="attack">
+            <span class="knob-val" data-readout="attack">—</span>
+          </label>
+          <label class="knob">
+            <span class="knob-name">Release</span>
+            <input type="range" data-knob="release">
+            <span class="knob-val" data-readout="release">—</span>
+          </label>
+          <label class="knob">
+            <span class="knob-name">Makeup</span>
+            <input type="range" data-knob="makeup">
+            <span class="knob-val" data-readout="makeup">—</span>
+          </label>
+          <label class="knob highlight">
+            <span class="knob-name">Blend</span>
+            <input type="range" data-knob="blend">
+            <span class="knob-val" data-readout="blend">—</span>
+          </label>
+        </div>
+      </div>
+
       <div id="challenge-form"></div>
     </section>
   </main>

@@ -19,7 +19,12 @@ export class Visualizer {
     this.running = true;
     const tick = () => {
       if (!this.running) return;
-      this._draw();
+      // Skip drawing while hidden — saves CPU when multiple visualizers
+      // are mounted but only one card is active. offsetParent is null for
+      // any element whose ancestor has display:none.
+      if (this.canvas.offsetParent !== null) {
+        this._draw();
+      }
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -27,6 +32,10 @@ export class Visualizer {
 
   stop() {
     this.running = false;
+  }
+
+  refresh() {
+    this._resize();
   }
 
   _resize() {
@@ -72,17 +81,28 @@ export class Visualizer {
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fillRect(0, meterY, w, meterH);
 
+    // Gain reduction grows from the right edge leftward, matching how
+    // hardware GR meters typically read (0 dB on the right, more reduction
+    // to the left).
     if (grNorm > 0.001) {
       const grColor = grNorm < 0.3 ? getCss('--air')
         : grNorm < 0.6 ? getCss('--weight')
         : getCss('--punch');
       ctx.fillStyle = grColor;
-      ctx.fillRect(0, meterY, w * grNorm, meterH);
+      const barW = w * grNorm;
+      ctx.fillRect(w - barW, meterY, barW, meterH);
     }
 
-    ctx.fillStyle = 'rgba(255,255,255,0.78)';
-    ctx.font = '11px "IBM Plex Sans", system-ui, sans-serif';
+    // "0" mark on the right edge — that's where the bar departs from.
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '10px "IBM Plex Sans", system-ui, sans-serif';
     ctx.textBaseline = 'middle';
+    ctx.textAlign = 'right';
+    ctx.fillText('0', w - 6, meterY + meterH / 2);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '11px "IBM Plex Sans", system-ui, sans-serif';
+    ctx.textAlign = 'left';
     ctx.fillText(
       `Gain reduction · ${grDb.toFixed(1)} dB`,
       8,
